@@ -1,0 +1,47 @@
+name: Publish Kodi download directory
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/kodi-pages.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: kodi-pages
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Build verified Kodi directory
+        run: |
+          mkdir site
+          base=https://github.com/leoondr/Stream4Me-Custom/releases/download/v2026.11.15
+          curl --fail --location --retry 3 "$base/plugin.video.s4me.custom-1.7.8.2.zip" -o site/plugin.video.s4me.custom-1.7.8.2.zip
+          curl --fail --location --retry 3 "$base/skin.aurora.tv-3.0.3.2.zip" -o site/skin.aurora.tv-3.0.3.2.zip
+          cd site
+          echo '7247c727675119c3b7e09a3759043004554026a8d9c0145cdc1fbd7f0e5cf5f7  plugin.video.s4me.custom-1.7.8.2.zip' | sha256sum -c -
+          echo 'e54cc89f1d6e08f76b2da52727d1fb84d149be1b5a06e014b590a50cd0011dee  skin.aurora.tv-3.0.3.2.zip' | sha256sum -c -
+          cat > index.html <<'HTML'
+          <!doctype html>
+          <html lang="it"><head><meta charset="utf-8"><title>Stream4Me Custom - Kodi</title></head><body>
+          <h1>Stream4Me Custom e Aurora TV</h1>
+          <p>Installa prima Stream4Me Custom, poi Aurora TV. Pacchetti di sviluppo per Kodi Omega.</p>
+          <pre>
+          <a href="plugin.video.s4me.custom-1.7.8.2.zip">plugin.video.s4me.custom-1.7.8.2.zip</a> 5897228
+          <a href="skin.aurora.tv-3.0.3.2.zip">skin.aurora.tv-3.0.3.2.zip</a> 51455177
+          </pre>
+          <p>Sorgenti e licenze inclusi negli ZIP. Collaudo Fire TV da completare.</p>
+          </body></html>
+          HTML
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
